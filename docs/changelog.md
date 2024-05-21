@@ -31,6 +31,21 @@ by [@jayzhan211](https://github.com/jayzhan211))
 
 - Added `C_char` type alias in `sys.ffi`.
 
+- Added one `format` method overload to both `StringLiteral` and `String`:
+
+  It builds a new `String` with a format template like in `🐍`
+  
+  ⚠️ Does not work in the parameter domain (`alias`) yet
+
+  For example:
+  
+  ```mojo
+  var x = "{0} %2 == {1} {mojo} {number}".format(
+      1024, True, mojo="❤️‍🔥", number=str(1.125)
+  )
+  print(x) #1024 %2 == True ❤️‍🔥 1.125
+  ```
+
 ### 🦋 Changed
 
 - Continued transition to `UnsafePointer` and unsigned byte type for strings:
