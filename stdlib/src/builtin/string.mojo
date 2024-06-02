@@ -2017,59 +2017,39 @@ struct String(
         Variadic arguments are required to implement `Stringable`.
 
         """
-        var Entries = _FormatCurlyEntry.create_entries(self)
         var manual_indexing_count = 0
         var automatic_indexing_count = 0
-        var kwargs_indexing_count = 0
-        for e in Entries:
-            if e[].value.isa[Int]():
-                manual_indexing_count += 1
-            elif e[].value.isa[NoneType]():
-                automatic_indexing_count += 1
-            elif e[].value.isa[String]():
-                kwargs_indexing_count += 1
 
-        if manual_indexing_count and automatic_indexing_count:
-            raise "Cannot both use manual and automatic indexing for *args"
-
-        for e in Entries:
-            if e[].value.isa[String]():
-                raise "Index " + e[].value[String] + " not in kwargs"
-            if manual_indexing_count:
-                if e[].value.isa[Int]() and e[].value[Int] >= len(args):
-                    raise ("Index " + str(e[].value[Int]) + " not in *args")
-            if automatic_indexing_count:
-                if automatic_indexing_count > len(args):
-                    raise ("Automatic indexing require more args in *args")
-
-        var res: String = ""
         var start = 0
+        var res: String = ""
 
-        if manual_indexing_count:
-            for e in Entries:
-                debug_assert(start < len(self), "start >= len(self)")
-                res += self[start : e[].first_curly]
-                if e[].value.isa[Int]():
-
+        for e in _IterateCurlyEntry(0,self,None):
+            if e:
+                res += self[start : e.value()[].first_curly]
+                if e.value()[].value.isa[NoneType]():
+                    if manual_indexing_count:
+                        raise "Cannot use both automatic and manual indexing"
+                    if automatic_indexing_count >= len(VariadicList(Ts)):
+                        raise "Not enough arg in *args"
                     @parameter
                     for i in range(len(VariadicList(Ts))):
-                        if i == e[].value[Int]:
+                        if i == automatic_indexing_count:
                             res += str(args[i])
-                start = e[].last_curly + 1
-
-        if automatic_indexing_count:
-            var current_arg_index = 0
-            for e in Entries:
-                debug_assert(start < len(self), "start >= len(self)")
-                res += self[start : e[].first_curly]
-                if e[].value.isa[NoneType]():
-
+                    automatic_indexing_count+=1
+                if e.value()[].value.isa[Int]():
+                    if automatic_indexing_count:
+                        raise "Cannot use both automatic and manual indexing"
+                    if e.value()[].value[Int] >= len(VariadicList(Ts)):
+                        raise "Not enough arg in *args"
                     @parameter
                     for i in range(len(VariadicList(Ts))):
-                        if i == current_arg_index:
+                        if i == e.value()[].value[Int]:
                             res += str(args[i])
-                    current_arg_index += 1
-                start = e[].last_curly + 1
+                    manual_indexing_count+=1
+                if e.value()[].value.isa[String]():
+                    raise e.value()[].value[String] + " not in **kwargs"
+                start = e.value()[].last_curly + 1
+
         if start < len(self):
             res += self[start : len(self)]
 
@@ -2285,3 +2265,51 @@ struct _FormatCurlyEntry:
                     Entries.append(tmp)
                 start = None
         return Entries
+
+@value
+struct _IterateCurlyEntry[
+    mutability: Bool, //,
+    lifetime: AnyLifetime[mutability].type,
+]:
+    """Iterator intenally used by the format method.
+
+    Parameters:
+        mutability: Whether the reference to the list is mutable.
+        lifetime: The lifetime of the List
+    """
+
+    var index: Int
+    var src: Reference[String, mutability, lifetime]
+    var start: Optional[Int]
+
+    fn __iter__(self) -> Self:
+        return self
+
+    fn __next__(
+        inout self,
+    ) -> Optional[_FormatCurlyEntry]:
+        if self.src[][self.index] == "{":
+            self.start = self.index
+            self.index += 1
+            return self.__next__()
+        if self.src[][self.index] == "}":
+            if self.start:
+                var start_value = self.start.value()[]
+                var tmp = _FormatCurlyEntry(start_value, self.index, None)
+                if self.index - start_value != 1:
+                    var tmp2 = self.src[][start_value + 1 : self.index]
+                    try:
+                        var tmp3 = int(tmp2)
+                        tmp.value = tmp3
+                    except:
+                        tmp.value = tmp2
+                self.index += 1
+                self.start = None
+                return tmp
+                
+
+        self.index += 1
+        return None
+
+    fn __len__(self) -> Int:
+        return len(self.src[]) - self.index

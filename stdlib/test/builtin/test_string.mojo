@@ -1163,6 +1163,69 @@ def test_format_args():
     # if Result != "Mojo !":
     #    raise "Assertion failed (alias): "
 
+def test_format_args2():
+    with assert_raises(contains="Not enough arg in *args"):
+        _ = String("A {0} B {1}").format("First")
+
+    with assert_raises(contains="Not enough arg in *args"):
+        _ = String("A {1} B {0}").format("First")
+
+    with assert_raises(contains="Not enough arg in *args"):
+        _ = String("A {1} B {0}").format()
+
+    with assert_raises(
+        contains="Not enough arg in *args"
+    ):
+        _ = String("A {} B {}").format("First")
+
+    with assert_raises(
+        contains="Cannot use both automatic and manual indexing"
+    ):
+        _ = String("A {} B {1}").format("First", "Second")
+
+    with assert_raises(contains="first not in **kwargs"):
+        _ = String("A {first} B {second}").format(1, 2)
+
+    assert_equal(
+        String(" {} , {} {} !").format(
+            "Hello",
+            "Beautiful",
+            "World",
+        ),
+        " Hello , Beautiful World !",
+    )
+
+    var vinput = "{} {}"
+    var output = String(vinput).format("123", 456)
+    assert_equal(len(output), 7)
+
+    vinput = "{1}{0}"
+    output = String(vinput).format("123", 456)
+    assert_equal(len(output), 6)
+    assert_equal(output, "456123")
+
+    vinput = "123"
+    output = String(vinput).format()
+    assert_equal(len(output), 3)
+
+    vinput = ""
+    output = String(vinput).format()
+    assert_equal(len(output), 0)
+
+    assert_equal(
+        String("{0} {1} ❤️‍🔥 {1} {0}").format(
+            "🔥",
+            "Mojo",
+        ),
+        "🔥 Mojo ❤️‍🔥 Mojo 🔥",
+    )
+
+    assert_equal(String("{0} {1}").format(True, 1.125), "True 1.125")
+
+    assert_equal(String("{0} {1}").format("{1}", "Mojo"), "{1} Mojo")
+    assert_equal(
+        String("{0} {1} {0} {1}").format("{1}", "Mojo"), "{1} Mojo {1} Mojo"
+    )
 
 def main():
     test_constructors()
@@ -1208,4 +1271,4 @@ def main():
     test_intable()
     test_string_mul()
     test_indexing()
-    test_format_args()
+    test_format_args2()
