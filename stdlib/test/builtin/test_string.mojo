@@ -1174,7 +1174,7 @@ def test_format_args2():
         _ = String("A {1} B {0}").format()
 
     with assert_raises(
-        contains="Not enough arg in *args"
+        contains="Automatic indexing require more args in *args"
     ):
         _ = String("A {} B {}").format("First")
 
@@ -1194,6 +1194,13 @@ def test_format_args2():
         ),
         " Hello , Beautiful World !",
     )
+
+    assert_equal(String("{{0}}").format("foo"), "{foo}")
+    assert_equal(String("{{}}").format("foo"), "{foo}")
+    assert_equal(String("{{0}").format("foo"), "{foo")
+    assert_equal(String("{{}").format("foo"), "{foo")
+    assert_equal(String("{0}}").format("foo"), "foo}")
+    assert_equal(String("{}}").format("foo"), "foo}")
 
     var vinput = "{} {}"
     var output = String(vinput).format("123", 456)

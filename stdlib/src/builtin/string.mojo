@@ -2023,31 +2023,44 @@ struct String(
         var start = 0
         var res: String = ""
 
-        for e in _IterateCurlyEntry(0,self,None):
+        for e in _IterateCurlyEntry(0, self, None):
             if e:
+                debug_assert(
+                    start < len(self),
+                    "_IterateCurlyEntry: start >= len(self)"
+                )
                 res += self[start : e.value()[].first_curly]
+                
                 if e.value()[].value.isa[NoneType]():
                     if manual_indexing_count:
-                        raise "Cannot use both automatic and manual indexing"
+                        raise 
+                            "Cannot use both automatic and manual indexing"
                     if automatic_indexing_count >= len(VariadicList(Ts)):
-                        raise "Not enough arg in *args"
+                        raise 
+                            "Automatic indexing require more args in *args"
                     @parameter
                     for i in range(len(VariadicList(Ts))):
                         if i == automatic_indexing_count:
                             res += str(args[i])
                     automatic_indexing_count+=1
+                
                 if e.value()[].value.isa[Int]():
                     if automatic_indexing_count:
-                        raise "Cannot use both automatic and manual indexing"
+                        raise 
+                            "Cannot use both automatic and manual indexing"
                     if e.value()[].value[Int] >= len(VariadicList(Ts)):
-                        raise "Not enough arg in *args"
+                        raise 
+                            "Not enough arg in *args"
                     @parameter
                     for i in range(len(VariadicList(Ts))):
                         if i == e.value()[].value[Int]:
                             res += str(args[i])
                     manual_indexing_count+=1
+                
                 if e.value()[].value.isa[String]():
-                    raise e.value()[].value[String] + " not in **kwargs"
+                    raise 
+                        e.value()[].value[String] + " not in **kwargs"
+                
                 start = e.value()[].last_curly + 1
 
         if start < len(self):
@@ -2233,48 +2246,21 @@ struct _FormatCurlyEntry:
 
     var first_curly: Int
     var last_curly: Int
-    var value: Variant[String, Int, NoneType]
-
-    @staticmethod
-    fn create_entries(arg: String) -> List[Self]:
-        """Used internally by the `format()` method.
-
-        Args:
-            arg: The "format" part provided by the user.
-
-        Returns:
-            A `List` of structured format entries.
-        """
-        var Entries = List[Self]()
-        var start = Optional[Int](None)
-        for i in range(len(arg)):
-            if arg[i] == "{":
-                start = i
-                continue
-            if arg[i] == "}":
-                if start:
-                    var start_value = start.value()[]
-                    var tmp = Self(start_value, i, None)
-                    if i - start_value != 1:
-                        var tmp2 = arg[start_value + 1 : i]
-                        try:
-                            var tmp3 = int(tmp2)
-                            tmp.value = tmp3
-                        except:
-                            tmp.value = tmp2
-                    Entries.append(tmp)
-                start = None
-        return Entries
+    var value: Variant[
+        String,     #kwargs indexing: {foo}
+        Int,        #Manual indexing: {3}
+        NoneType    #Automatic indexing: {}
+    ]
 
 @value
 struct _IterateCurlyEntry[
     mutability: Bool, //,
     lifetime: AnyLifetime[mutability].type,
 ]:
-    """Iterator intenally used by the format method.
+    """Iterator used intenally by the `format()` method.
 
     Parameters:
-        mutability: Whether the reference to the list is mutable.
+        mutability: Whether the reference to the format is mutable.
         lifetime: The lifetime of the List
     """
 
@@ -2291,23 +2277,27 @@ struct _IterateCurlyEntry[
         if self.src[][self.index] == "{":
             self.start = self.index
             self.index += 1
-            return self.__next__()
+            return None
         if self.src[][self.index] == "}":
             if self.start:
                 var start_value = self.start.value()[]
-                var tmp = _FormatCurlyEntry(start_value, self.index, None)
+                var tmp = _FormatCurlyEntry(
+                    start_value, #{
+                    self.index,  #}
+                    None #Automatic indexing ({})
+                )
                 if self.index - start_value != 1:
+                    # {tmp2}
                     var tmp2 = self.src[][start_value + 1 : self.index]
                     try:
                         var tmp3 = int(tmp2)
-                        tmp.value = tmp3
+                        tmp.value = tmp3 #Manual indexing ({0})
                     except:
-                        tmp.value = tmp2
+                        tmp.value = tmp2 #Kwargs indexing ({foo})
                 self.index += 1
                 self.start = None
                 return tmp
                 
-
         self.index += 1
         return None
 
