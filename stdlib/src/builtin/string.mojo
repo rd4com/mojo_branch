@@ -2003,7 +2003,7 @@ struct String(
         print(x) #True hello world
         ```
 
-        ⚠️ Raising functions does not work in the parameter domain.
+        Raising functions does not work in the parameter domain.
 
         Args:
             args: Values passed as variadic arguments.
