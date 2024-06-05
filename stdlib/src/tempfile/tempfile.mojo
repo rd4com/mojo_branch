@@ -50,7 +50,7 @@ fn _candidate_tempdir_list() -> List[String]:
 
     # First, try the environment.
     for env_var in possible_env_vars:
-        if dirname := os.getenv(env_var[]):
+        if dirname := os.getenv(env_var):
             dirlist.append(dirname^)
 
     # Failing that, try OS-specific locations.
@@ -77,10 +77,10 @@ fn _get_default_tempdir() raises -> String:
     var dirlist = _candidate_tempdir_list()
 
     for dir_name in dirlist:
-        if not os.path.isdir(dir_name[]):
+        if not os.path.isdir(dir_name):
             continue
-        if _try_to_create_file(dir_name[]):
-            return dir_name[]
+        if _try_to_create_file(dir_name):
+            return dir_name
 
     raise Error("No usable temporary directory found")
 
@@ -178,7 +178,7 @@ fn _rmtree(path: String, ignore_errors: Bool = False) raises:
         raise Error("`path`can not be a symbolic link: " + path)
 
     for file_or_dir in os.listdir(path):
-        var curr_path = os.path.join(path, file_or_dir[])
+        var curr_path = os.path.join(path, file_or_dir)
         if os.path.isfile(curr_path):
             try:
                 os.remove(curr_path)

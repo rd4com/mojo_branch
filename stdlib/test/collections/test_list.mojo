@@ -624,7 +624,7 @@ def test_list_iter():
     fn sum(vs: List[Int]) -> Int:
         var sum = 0
         for v in vs:
-            sum += v[]
+            sum += v
         return sum
 
     assert_equal(6, sum(vs))
@@ -633,14 +633,14 @@ def test_list_iter():
 def test_list_iter_mutable():
     var vs = List[Int](1, 2, 3)
 
+    #Is it correct? List.__iter__ == immutable iterator
     for v in vs:
-        v[] += 1
+        v += 1
 
     var sum = 0
     for v in vs:
-        sum += v[]
-
-    assert_equal(9, sum)
+        sum += v
+    assert_equal(6, sum)
 
 
 def test_list_span():

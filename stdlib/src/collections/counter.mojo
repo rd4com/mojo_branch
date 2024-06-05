@@ -54,8 +54,7 @@ struct Counter[V: KeyElement](
         """
         self._data = Dict[V, Int]()
         for item_ref in items:
-            var item = item_ref[]
-            self._data[item] = self._data.get(item, 0) + 1
+            self._data[item_ref] = self._data.get(item_ref, 0) + 1
 
     def __getitem__(self, key: V) -> Int:
         """Get the count of a key.

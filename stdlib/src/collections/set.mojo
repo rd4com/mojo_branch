@@ -76,7 +76,7 @@ struct Set[T: KeyElement](Sized, Comparable, Hashable, Boolable):
         """
         self.__init__()
         for e in elements:
-            self.add(e[])
+            self.add(e)
 
     fn __moveinit__(inout self, owned other: Self):
         """Move constructor.

@@ -466,7 +466,7 @@ fn any[T: BoolableCollectionElement](list: List[T]) -> Bool:
         `True` if **any** element in the list is truthy, `False` otherwise.
     """
     for item in list:
-        if item[]:
+        if item:
             return True
     return False
 
@@ -523,7 +523,7 @@ fn all[T: BoolableCollectionElement](list: List[T]) -> Bool:
         `True` if **all** elements in the list are truthy, `False` otherwise.
     """
     for item in list:
-        if not item[]:
+        if not item:
             return False
     return True
 

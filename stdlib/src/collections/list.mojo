@@ -56,7 +56,7 @@ struct _ListIter[
 
     fn __next__(
         inout self,
-    ) -> Reference[T, list_lifetime]:
+    ) -> ref[list_lifetime]T:
         @parameter
         if forward:
             self.index += 1
@@ -109,7 +109,7 @@ struct List[T: CollectionElement](CollectionElement, Sized, Boolable):
         """
         self.__init__(capacity=existing.capacity)
         for e in existing:
-            self.append(e[])
+            self.append(e^)
 
     fn __init__(inout self, *, capacity: Int):
         """Constructs a list with the given capacity.
@@ -235,7 +235,7 @@ struct List[T: CollectionElement](CollectionElement, Sized, Boolable):
 
         constrained[_type_is_eq[T, T2](), "value type is not self.T"]()
         for i in self:
-            if rebind[Reference[T2, __lifetime_of(self)]](i)[] == value:
+            if rebind[Reference[T2, __lifetime_of(self)]](Reference(i))[] == value:
                 return True
         return False
 
@@ -288,13 +288,25 @@ struct List[T: CollectionElement](CollectionElement, Sized, Boolable):
         """
         self.extend(other^)
 
-    fn __iter__(ref [_]self: Self) -> _ListIter[T, __lifetime_of(self)]:
+    fn __iter__[L:ImmutableLifetime](
+        ref [L]self: Self
+    ) -> _ListIter[T, L]:
         """Iterate over elements of the list, returning immutable references.
 
         Returns:
             An iterator of immutable references to the list elements.
         """
-        return _ListIter(0, self)
+        return _ListIter(0, Reference(self))
+
+    # TODO: implement when unsafe_get_mut
+    #fn iter_mut[L:MutableLifetime](
+    #    ref [L]self: Self
+    #) -> _ListIter[T, L]:
+    #    """Iterate over elements of the list, returning immutable references.
+    #    Returns:
+    #        An iterator of immutable references to the list elements.
+    #    """
+    #    return _ListIter(1, Reference(self))
 
     fn __reversed__(
         ref [_]self: Self,
@@ -842,7 +854,7 @@ struct List[T: CollectionElement](CollectionElement, Sized, Boolable):
         """
         var count = 0
         for elem in self:
-            if elem[] == value:
+            if elem == value:
                 count += 1
         return count
 

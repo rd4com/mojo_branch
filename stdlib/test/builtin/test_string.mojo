@@ -867,10 +867,10 @@ fn test_isspace() raises:
     )
 
     for i in univ_sep_var:
-        assert_true(i[].isspace())
+        assert_true(i.isspace())
 
     for i in List[String]("not", "space", "", "s", "a", "c"):
-        assert_false(i[].isspace())
+        assert_false(i.isspace())
 
     for i in range(len(univ_sep_var)):
         var sep = String("")

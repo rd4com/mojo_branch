@@ -519,7 +519,7 @@ def test_sort_string_small_list():
     var list = random_numbers[DType.int32](10)
     var string_list = List[String]()
     for n in list:
-        string_list.append(str(int(n[])))
+        string_list.append(str(int(n)))
     sort(string_list)
     assert_sorted_string(string_list)
 
@@ -528,7 +528,7 @@ def test_sort_string_big_list():
     var list = random_numbers[DType.int32](1000)
     var string_list = List[String]()
     for n in list:
-        string_list.append(str(int(n[])))
+        string_list.append(str(int(n)))
     sort(string_list)
     assert_sorted_string(string_list)
 
@@ -579,8 +579,8 @@ def test_sort_comparamble_elements_list():
         var ages = random_numbers[DType.uint8](count)
         var names = List[String]("Maxim", "Max", "Alex", "Bob", "Joe")
         for age in ages:
-            var name = names[int(age[]) % len(names)]
-            list.append(Person(name, int(age[])))
+            var name = names[int(age) % len(names)]
+            list.append(Person(name, int(age)))
 
     gen_list(10)
     sort(list)

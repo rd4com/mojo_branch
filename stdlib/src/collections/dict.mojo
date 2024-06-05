@@ -458,7 +458,7 @@ struct Dict[K: KeyElement, V: CollectionElement](
         """
         var dict = Dict[K, V]()
         for key in keys:
-            dict[key[]] = value
+            dict[key] = value
         return dict
 
     @staticmethod
@@ -476,7 +476,7 @@ struct Dict[K: KeyElement, V: CollectionElement](
         """
         var dict = Dict[K, Optional[V]]()
         for key in keys:
-            dict[key[]] = value
+            dict[key] = value
         return dict
 
     fn __copyinit__(inout self, existing: Self):
