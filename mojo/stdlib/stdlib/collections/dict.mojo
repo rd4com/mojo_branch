@@ -828,7 +828,21 @@ struct Dict[K: KeyElement, V: Copyable & Movable, H: Hasher = default_hasher](
         Returns:
             True if the key exists in the dictionary, False otherwise.
         """
-        return self._find_index(hash[HasherType=H](key), key)[0]
+        var hash = hash[HasherType=H](key)
+
+        var slot = hash & (self._reserved() - 1)
+        var perturb = hash
+        while True:
+            var index = self._get_index(slot)
+            if index >= 0:
+                ref entry = self._entries._data[index]
+                ref val = entry._value._get_ptr[DictEntry[K,V,H]]()[]
+                if val.hash == hash:
+                    if likely(val.key == key):
+                        return True
+            elif index == Self.EMPTY:
+                return False
+            self._next_index_slot(slot, perturb)
 
     fn __iter__(ref self) -> Self.IteratorType[__origin_of(self)]:
         """Iterate over the dict's keys as immutable references.
@@ -967,6 +981,7 @@ struct Dict[K: KeyElement, V: Copyable & Movable, H: Hasher = default_hasher](
         except:
             return Optional[V](None)
 
+    @always_inline
     fn _find_ref(
         ref self, key: K
     ) raises -> ref [self._entries[0].value().value] Self.V:
@@ -980,15 +995,21 @@ struct Dict[K: KeyElement, V: Copyable & Movable, H: Hasher = default_hasher](
             present, otherwise an empty Optional.
         """
         var hash = hash[HasherType=H](key)
-        var found, _, index = self._find_index(hash, key)
 
-        if found:
-            ref entry = self._entries[index]
-            debug_assert(entry.__bool__(), "entry in index must be full")
-            # SAFETY: We just checked that `entry` is present.
-            return entry.unsafe_value().value
+        var slot = hash & (self._reserved() - 1)
+        var perturb = hash
+        while True:
+            var index = self._get_index(slot)
+            if index >= 0:
+                ref entry = self._entries._data[index]
+                ref val = entry._value._get_ptr[DictEntry[K,V,H]]()[]
+                if val.hash == hash:
+                    if likely(val.key == key):
+                        return val.value
+            elif index == Self.EMPTY:
+                raise Error("KeyError")
+            self._next_index_slot(slot, perturb)
 
-        raise Error("KeyError")
 
     fn get(self, key: K) -> Optional[V]:
         """Get a value from the dictionary by key.
@@ -1219,17 +1240,55 @@ struct Dict[K: KeyElement, V: Copyable & Movable, H: Hasher = default_hasher](
 
     fn _insert[
         safe_context: Bool = False
-    ](mut self, var entry: DictEntry[K, V, H]):
+    ](mut self, var new_entry: DictEntry[K, V, H]):
         @parameter
         if not safe_context:
             self._maybe_resize()
-        var found, slot, index = self._find_index(entry.hash, entry.key)
 
-        self._entries[index] = entry^
-        if not found:
-            self._set_index(slot, index)
-            self._len += 1
-            self._n_entries += 1
+        var slot = new_entry.hash & (self._reserved() - 1)
+        var perturb = new_entry.hash
+        var removed_slot = UInt64(0)
+        var removed_slot_found = UInt64(0)
+        while True:
+            var index = self._get_index(slot)
+            if index >= 0:
+                ref entry = self._entries._data[index]
+                ref val = entry._value._get_ptr[DictEntry[K,V,H]]()[]
+                if val.hash == new_entry.hash:
+                    if likely(val.key == new_entry.key):
+                        val.value = new_entry^.reap_value()
+                        return
+            elif index == Self.EMPTY:
+                removed_slot = (removed_slot*removed_slot_found) + (slot*(1-removed_slot_found))
+                self._entries[self._n_entries] = new_entry^
+                self._set_index(removed_slot, self._n_entries)
+                self._len += 1
+                self._n_entries += 1
+                return
+            else:
+                removed_slot = (removed_slot*removed_slot_found) + (slot*(1-removed_slot_found))
+                removed_slot_found = 1
+            self._next_index_slot(slot, perturb)
+
+    fn _insert_no_duplicate[
+        safe_context: Bool = False
+    ](mut self, var new_entry: DictEntry[K, V, H]):
+        @parameter
+        if not safe_context:
+            self._maybe_resize()
+        # When resizing up, all keys are differents,
+        # we can skip checking for key equality.
+        var slot = new_entry.hash & (self._reserved() - 1)
+        var perturb = new_entry.hash
+        while True:
+            var index = self._get_index(slot)
+            if index == Self.EMPTY:
+                self._entries._data[self._n_entries] = new_entry^
+                self._set_index(slot, self._n_entries)
+                self._len += 1
+                self._n_entries += 1
+                return
+            self._next_index_slot(slot, perturb)
 
     fn _get_index(self, slot: UInt64) -> Int:
         return self._index.get_index(self._reserved(), slot)
@@ -1286,11 +1345,12 @@ struct Dict[K: KeyElement, V: Copyable & Movable, H: Hasher = default_hasher](
         var old_entries = self._entries^
         self._entries = self._new_entries(_reserved)
         self._index = _DictIndex(self._reserved())
-
         for i in range(len(old_entries)):
-            var entry = old_entries[i]
+            ref entry = old_entries._data[i]
             if entry:
-                self._insert[safe_context=True](entry.unsafe_take())
+                # No two existing entries have same key:
+                self._insert_no_duplicate[safe_context=True](entry.unsafe_take())
+                # ^ optimizes for no key.__eq__
 
     fn _compact(mut self):
         self._index = _DictIndex(self._reserved())
